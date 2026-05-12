@@ -1,359 +1,302 @@
-import "./App.css";
-import { useState } from "react";
+import { useEffect, useId, useState } from "react";
+import "./styles.css";
+import { Header } from "./components/Header";
+import { ChatInterface } from "./components/ChatInterface";
+import { TextSimplifier } from "./components/TextSimplifier";
+import { AccommodationBuilder } from "./components/AccommodationBuilder";
+import { QuickCommunicationBoard } from "./components/QuickCommunicationBoard";
+import { AccessibilitySettings } from "./components/AccessibilitySettings";
+import { DisclaimerBox } from "./components/DisclaimerBox";
+import {
+  accessibilityOptionDefinitions,
+  defaultAccessibilitySettings,
+  loadAccessibilitySettings,
+  saveAccessibilitySettings,
+  type AccessibilitySettingsState,
+} from "./accessibility";
+import { getHashForPage, getPageFromHash, type Page } from "./appPages";
 
-/*
-  Emotion category type
-*/
-type EmotionCategory = {
+const homeActions: Array<{
+  page: Exclude<Page, "privacy">;
   title: string;
-  emotions: string[];
-  response: string;
-  designReason: string;
-};
-
-/*
-  All emotion categories for the project
-*/
-const categories: EmotionCategory[] = [
+  description: string;
+}> = [
   {
-    title: "Positive / Energized States",
-    emotions: ["Happy", "Excited", "Inspired", "Confident", "Calm"],
-    response:
-      "Bright interface, creative prompts, and balanced layout.",
-    designReason:
-      "This mode supports users by reducing unnecessary effort and making the interface easier to process.",
+    page: "assistant",
+    title: "AI Assistant",
+    description: "Ask questions and get plain-language support for digital tasks.",
   },
   {
-    title: "Low-Energy / Fatigue States",
-    emotions: ["Tired", "Fatigued", "Burned out", "Sleepy", "Unmotivated"],
-    response:
-      "Larger text, gentle layout, fewer steps, and more spacing.",
-    designReason:
-      "This mode supports users by reducing unnecessary effort and making the interface easier to process.",
+    page: "simplify",
+    title: "Simplify Text",
+    description: "Turn difficult information into a summary, explanation, and checklist.",
   },
   {
-    title: "Stress / Anxiety States",
-    emotions: ["Stressed", "Anxious", "Overwhelmed", "Nervous", "Panicked"],
-    response:
-      "Simplified interface, calming layout, and guided interaction.",
-    designReason:
-      "This mode supports users by reducing unnecessary effort and making the interface easier to process.",
+    page: "accommodation",
+    title: "Accommodation Message Builder",
+    description: "Create respectful messages that explain an accessibility need.",
   },
   {
-    title: "Negative / Heavy Emotional States",
-    emotions: ["Sad", "Lonely", "Discouraged", "Frustrated", "Hopeless"],
-    response:
-      "Supportive language, soft interface, and encouraging tone.",
-    designReason:
-      "This mode supports users by reducing unnecessary effort and making the interface easier to process.",
+    page: "communication",
+    title: "Quick Communication Board",
+    description: "Use large message buttons for common accessibility communication needs.",
   },
   {
-    title: "Anger / Frustration States",
-    emotions: ["Angry", "Irritated", "Frustrated", "Impatient", "Defensive"],
-    response:
-      "Direct communication, fewer interruptions, and quick actions.",
-    designReason:
-      "This mode supports users by reducing unnecessary effort and making the interface easier to process.",
-  },
-  {
-    title: "Cognitive Load States",
-    emotions: [
-      "Cognitive overload",
-      "Confused",
-      "Distracted",
-      "Mentally blocked",
-      "Decision fatigue",
-    ],
-    response:
-      "Reduced choices, step-by-step guidance, and focus mode.",
-    designReason:
-      "This mode supports users by reducing unnecessary effort and making the interface easier to process.",
-  },
-  {
-    title: "Sensory Sensitivity States",
-    emotions: [
-      "Overstimulated",
-      "Noise-sensitive",
-      "Light-sensitive",
-      "Visually strained",
-      "Motion-sensitive",
-    ],
-    response:
-      "Reduced motion, muted visuals, softer theme, and larger text.",
-    designReason:
-      "This mode supports users by reducing unnecessary effort and making the interface easier to process.",
+    page: "settings",
+    title: "Accessibility Settings",
+    description: "Save display and language preferences for a more comfortable experience.",
   },
 ];
-function getEmotionGuidance(emotion: string) {
-  const guidance: Record<string, string> = {
-    Happy: "Keep the full interface available and support creative exploration.",
-    Excited: "Use playful but controlled interactions without overwhelming the user.",
-    Inspired: "Offer creative prompts and open-ended pathways.",
-    Confident: "Keep advanced options visible because the user may want more control.",
-    Calm: "Use a balanced interface with normal spacing and clear navigation.",
 
-    Tired: "Increase text size, reduce steps, and avoid unnecessary decisions.",
-    Fatigued: "Use high readability, more spacing, and gentle interaction patterns.",
-    "Burned out": "Show only essential actions and use calm, supportive language.",
-    Sleepy: "Use large buttons, readable text, and avoid visually tiring elements.",
-    Unmotivated: "Suggest one small next step instead of presenting too many choices.",
-
-    Stressed: "Simplify the interface and reduce competing information.",
-    Anxious: "Use reassurance, predictable layout, and calming instructions.",
-    Overwhelmed: "Show one action at a time and hide non-essential details.",
-    Nervous: "Provide guided instructions and reduce uncertainty.",
-    Panicked: "Use an emergency-simple interface with only the most important action.",
-
-    Sad: "Use a gentle tone and avoid overly energetic visual language.",
-    Lonely: "Offer supportive copy and connection-oriented prompts.",
-    Discouraged: "Use encouraging language and break tasks into achievable steps.",
-    Frustrated: "Make error recovery clear and reduce repeated effort.",
-    Hopeless: "Use very careful, supportive language and avoid pressure.",
-
-    Angry: "Use direct language, avoid interruptions, and give the user control.",
-    Irritated: "Remove popups and reduce friction wherever possible.",
-    Impatient: "Make quick actions visible and reduce waiting moments.",
-    Defensive: "Use neutral wording and avoid blame-based messages.",
-
-    "Cognitive overload": "Reduce choices and present information in smaller chunks.",
-    Confused: "Use step-by-step guidance and clearer labels.",
-    Distracted: "Activate focus mode and reduce visual clutter.",
-    "Mentally blocked": "Break the task into small, manageable actions.",
-    "Decision fatigue": "Recommend a default option to reduce decision pressure.",
-
-    Overstimulated: "Reduce motion, mute visuals, and remove unnecessary effects.",
-    "Noise-sensitive": "Avoid auto-playing sound and provide quiet interaction patterns.",
-    "Light-sensitive": "Use a darker or softer theme to reduce visual strain.",
-    "Visually strained": "Increase text size, spacing, and contrast clarity.",
-    "Motion-sensitive": "Disable animation and avoid moving interface elements.",
-  };
-
-  return guidance[emotion] || "Select an emotion or state to see interface guidance.";
-}
 function App() {
-  /*
-    Store currently selected category
-  */
-  const [selectedCategory, setSelectedCategory] =
-    useState<EmotionCategory | null>(null);
-  const [selectedEmotion, setSelectedEmotion] =
-    useState<string>("");
-  const [largeText, setLargeText] = useState(false);
+  const [page, setPage] = useState<Page>(() => {
+    if (typeof window === "undefined") {
+      return "home";
+    }
 
-  const [reducedMotion, setReducedMotion] = useState(false);
+    return getPageFromHash(window.location.hash);
+  });
+  const [settings, setSettings] = useState<AccessibilitySettingsState>(() =>
+    loadAccessibilitySettings(),
+  );
+  const mainHeadingId = useId();
 
-  const [highContrast, setHighContrast] = useState(false);
+  useEffect(() => {
+    saveAccessibilitySettings(settings);
+  }, [settings]);
 
-  function handleCategorySelect(category: EmotionCategory) {
-    setSelectedCategory(category);
-    setSelectedEmotion("");
+  useEffect(() => {
+    const root = document.documentElement;
+    root.dataset.largeText = String(settings.largeText);
+    root.dataset.extraLargeText = String(settings.extraLargeText);
+    root.dataset.highContrast = String(settings.highContrast);
+    root.dataset.reducedMotion = String(settings.reducedMotion);
+    root.dataset.increasedSpacing = String(settings.increasedSpacing);
+    root.dataset.simpleLanguage = String(settings.simpleLanguageMode);
+    root.dataset.dyslexiaFont = String(settings.dyslexiaFriendlyFont);
+    root.dataset.hideDistractions = String(settings.hideVisualDistractions);
+  }, [settings]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const handleHashChange = () => {
+      setPage(getPageFromHash(window.location.hash));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    window.addEventListener("hashchange", handleHashChange);
+    return () => {
+      window.removeEventListener("hashchange", handleHashChange);
+    };
+  }, []);
+
+  function updateSetting(
+    key: keyof AccessibilitySettingsState,
+    value: boolean,
+  ) {
+    setSettings((current) => ({ ...current, [key]: value }));
   }
 
-  function resetInterface() {
-    setSelectedCategory(null);
-    setSelectedEmotion("");
-    setLargeText(false);
-    setReducedMotion(false);
-    setHighContrast(false);
+  function resetSettings() {
+    setSettings(defaultAccessibilitySettings);
+  }
+
+  function navigateTo(nextPage: Page) {
+    setPage(nextPage);
+
+    if (typeof window !== "undefined") {
+      window.location.hash = getHashForPage(nextPage);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   }
 
   return (
-    <>
-      <div
-        className={`app
-      ${selectedCategory
-            ? selectedCategory.title.toLowerCase().replaceAll(" ", "-")
-            : ""
-          }
-      ${largeText ? "large-text-mode" : ""}
-      ${reducedMotion ? "reduced-motion-mode" : ""}
-      ${highContrast ? "high-contrast-mode" : ""}
-    `}>
+    <div className="app-shell">
+      <a className="skip-link" href={`#${mainHeadingId}`}>
+        Skip to main content
+      </a>
 
-        {/* Header */}
-        <header className="header">
-          <h1>Emotion-to-Interface Adapter</h1>
+      <Header currentPage={page} onNavigate={navigateTo} />
 
-          <p>
-            A human-centered accessibility interface that adapts to emotional,
-            cognitive, and sensory states.
-          </p>
-        </header>
-
-        {/* Main content */}
-        <main>
-          <section className="controls-section">
-            <h2>Accessibility Controls</h2>
-
-            <div className="controls-grid">
-              <button
-                className={largeText ? "control-active" : ""}
-                onClick={() => setLargeText(!largeText)}
-              >
-                Large Text: {largeText ? "On" : "Off"}
-              </button>
-
-              <button
-                className={reducedMotion ? "control-active" : ""}
-                onClick={() => setReducedMotion(!reducedMotion)}
-              >
-                Reduced Motion: {reducedMotion ? "On" : "Off"}
-              </button>
-
-              <button
-                className={highContrast ? "control-active" : ""}
-                onClick={() => setHighContrast(!highContrast)}
-              >
-                High Contrast: {highContrast ? "On" : "Off"}
-              </button>
-              <button
-                className="reset-all-button"
-                onClick={resetInterface}
-              >
-                Reset All Settings
-              </button>
+      <main className="page-shell" id={mainHeadingId}>
+        {page === "home" && (
+          <section className="stack-lg" aria-labelledby="home-title">
+            <div className="hero-card surface">
+              <p className="eyebrow">Accessibility-first AI support</p>
+              <h1 id="home-title">AccessEase AI</h1>
+              <p className="lede">
+                AccessEase AI helps people understand difficult information,
+                complete online tasks, and communicate accessibility needs in
+                clear language.
+              </p>
+              <p className="supporting-text">
+                This app is designed for blind and low-vision users,
+                neurodivergent users, people with cognitive, motor, speech, and
+                communication disabilities, and Deaf or hard-of-hearing users.
+              </p>
             </div>
 
-            <button onClick={() => setReducedMotion(!reducedMotion)}>
-              Toggle Reduced Motion
-            </button>
+            <section className="surface stack-md" aria-labelledby="quick-start">
+              <div>
+                <h2 id="quick-start">Choose a tool</h2>
+                <p className="supporting-text">
+                  Every tool is designed to work with keyboard navigation,
+                  visible focus states, responsive layouts, and saved
+                  accessibility preferences.
+                </p>
+              </div>
 
-            <button onClick={() => setHighContrast(!highContrast)}>
-              Toggle High Contrast
-            </button>
-          </section>
-          <div className="controls-grid"></div>
-          {/* Category section */}
-          <section className="intro-section">
-          </section>
-          <section className="skills-section">
-            <h2>Skills Demonstrated</h2>
+              <div className="feature-grid">
+                {homeActions.map((action) => (
+                  <button
+                    key={action.page}
+                    className="feature-card"
+                    onClick={() => navigateTo(action.page)}
+                    type="button"
+                  >
+                    <span className="feature-title">{action.title}</span>
+                    <span className="feature-description">
+                      {action.description}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </section>
 
-            <div className="skills-grid">
-              <span>Inclusive UX</span>
-              <span>Accessibility Thinking</span>
-              <span>Adaptive Interfaces</span>
-              <span>React</span>
-              <span>TypeScript</span>
-              <span>Vite</span>
-              <span>Semantic HTML</span>
-              <span>CSS</span>
+            <DisclaimerBox title="Important safety note">
+              AccessEase AI is not legal, medical, financial, or emergency
+              advice. If this is an emergency, contact local emergency services
+              right away.
+            </DisclaimerBox>
+          </section>
+        )}
+
+        {page === "assistant" && (
+          <section className="stack-lg" aria-labelledby="assistant-title">
+            <div className="surface stack-sm">
+              <h1 id="assistant-title">AI Assistant</h1>
+              <p className="supporting-text">
+                Ask for help understanding information, planning steps, or
+                preparing for an online task. Responses default to plain
+                language.
+              </p>
             </div>
+
+            <ChatInterface simpleLanguageMode={settings.simpleLanguageMode} />
+
+            <DisclaimerBox title="Use care with personal details">
+              Do not enter highly sensitive personal, medical, legal, or
+              financial information into the assistant.
+            </DisclaimerBox>
           </section>
-          <h2>Project Purpose</h2>
+        )}
 
-          <p>
-            This project explores how digital interfaces can respond to emotional,
-            cognitive, and sensory states. Instead of assuming every user needs the
-            same interface at all times, the app demonstrates how design can become
-            more supportive, readable, focused, or calm depending on user needs.
-          </p>
-
-          <section className="category-section">
-            <h2>Emotion Categories</h2>
-
-            <div className="card-grid">
-              {categories.map((category) => (
-                <button
-                  key={category.title}
-                  className="emotion-card"
-                  onClick={() => handleCategorySelect(category)}
-                >
-                  <h3>{category.title}</h3>
-
-                  <p>{category.emotions.join(", ")}</p>
-                </button>
-              ))}
+        {page === "simplify" && (
+          <section className="stack-lg" aria-labelledby="simplify-title">
+            <div className="surface stack-sm">
+              <h1 id="simplify-title">Simplify Text</h1>
+              <p className="supporting-text">
+                Paste difficult text and get a short summary, a clearer
+                explanation, useful questions, and a practical checklist.
+              </p>
             </div>
+
+            <TextSimplifier simpleLanguageMode={settings.simpleLanguageMode} />
           </section>
+        )}
 
-          {/* Selected category details */}
-          {
-            selectedCategory && (
-              <section className="details-section">
-                <h2>{selectedCategory.title}</h2>
+        {page === "accommodation" && (
+          <section className="stack-lg" aria-labelledby="accommodation-title">
+            <div className="surface stack-sm">
+              <h1 id="accommodation-title">Accommodation Message Builder</h1>
+              <p className="supporting-text">
+                Describe the situation and your need, and AccessEase AI will
+                draft a respectful message you can copy and use.
+              </p>
+            </div>
 
-                <h3>States</h3>
-                <div className="emotion-button-group">
-                  {selectedCategory.emotions.map((emotion) => (
-                    <button
-                      key={emotion}
-                      className="emotion-tag"
-                      onClick={() => setSelectedEmotion(emotion)}
-                    >
-                      {emotion}
-                    </button>
-                  ))}
-                </div>
+            <AccommodationBuilder />
+          </section>
+        )}
 
-                {selectedEmotion && (
-                  <>
-                    <h3>Selected Emotion / State</h3>
+        {page === "communication" && (
+          <section className="stack-lg" aria-labelledby="communication-title">
+            <div className="surface stack-sm">
+              <h1 id="communication-title">Quick Communication Board</h1>
+              <p className="supporting-text">
+                Select a common communication need to generate a message for
+                sharing in person, online, or by email.
+              </p>
+            </div>
 
-                    <p>{selectedEmotion}</p>
-                    <p className="emotion-guidance">
-                      {getEmotionGuidance(selectedEmotion)}
-                    </p>
+            <QuickCommunicationBoard />
+          </section>
+        )}
 
-                  </>
-                )}
+        {page === "settings" && (
+          <section className="stack-lg" aria-labelledby="settings-title">
+            <div className="surface stack-sm">
+              <h1 id="settings-title">Accessibility Settings</h1>
+              <p className="supporting-text">
+                Changes are saved automatically on this device using local
+                storage.
+              </p>
+            </div>
 
-                <h3>Adaptive UI Response</h3>
+            <AccessibilitySettings
+              definitions={accessibilityOptionDefinitions}
+              settings={settings}
+              onUpdate={updateSetting}
+              onReset={resetSettings}
+            />
+          </section>
+        )}
 
-                <p>{selectedCategory.response}</p>
-                <div className="preview-panel">
-                  <h3>Adaptive Interface Preview</h3>
+        {page === "privacy" && (
+          <section className="stack-lg" aria-labelledby="privacy-title">
+            <div className="surface stack-md">
+              <h1 id="privacy-title">Privacy Notice</h1>
+              <p className="supporting-text">
+                AccessEase AI is built to reduce barriers, but it should not be
+                used for highly sensitive secrets or emergency situations.
+              </p>
+              <div className="stack-sm">
+                <p>
+                  Avoid entering highly sensitive personal, medical, legal, or
+                  financial information unless you fully understand where the AI
+                  service is running and how data is stored.
+                </p>
+                <p>
+                  Accessibility preferences are stored locally on this device so
+                  the app can remember your display and language settings.
+                </p>
+                <p>
+                  If this is an emergency or crisis, contact local emergency
+                  services or a trusted local crisis resource immediately.
+                </p>
+              </div>
+            </div>
 
-                  <div className="preview-content">
-                    <button>Primary Action</button>
+            <DisclaimerBox title="Current technical setup">
+              The frontend is prepared to call a backend route at
+              <code>/api/ai</code>. If no backend key is configured, the app
+              uses safe mock responses for local development.
+            </DisclaimerBox>
+          </section>
+        )}
+      </main>
 
-                    {selectedCategory.title !== "Stress / Anxiety States" &&
-                      selectedCategory.title !== "Cognitive Load States" && (
-                        <>
-                          <button>Secondary Option</button>
-                          <button>Extra Settings</button>
-                        </>
-                      )}
-
-                    <p>
-                      This area simulates how an adaptive interface may change based on
-                      emotional, cognitive, or sensory conditions.
-                    </p>
-                  </div>
-                </div>
-                <h3>Why this design helps</h3>
-
-                <p>{selectedCategory.designReason}</p>
-
-                <h3>Accessibility Features Demonstrated</h3>
-
-                <ul className="accessibility-list">
-                  <li>Clear emotional-state selection</li>
-                  <li>Reduced visual complexity for stress and overload</li>
-                  <li>Larger readable layout for fatigue</li>
-                  <li>Reduced motion support for sensory sensitivity</li>
-                  <li>Supportive and non-judgmental interface language</li>
-                </ul>
-
-                <button
-                  className="reset-button"
-                  onClick={resetInterface}
-                >
-                  Reset Interface
-                </button>
-              </section>
-            )
-          }
-        </main >
-
-        {/* Footer */}
-        < footer className="footer" >
-          <p>
-            Designed with inclusive UX and accessibility-centered thinking.
-          </p>
-        </footer >
-      </div >
-    </>
+      <footer className="site-footer surface">
+        <p className="supporting-text">
+          AccessEase AI is designed to support understanding and accessibility
+          communication in plain language. It is not a replacement for
+          emergency, medical, legal, or financial professionals.
+        </p>
+      </footer>
+    </div>
   );
 }
 

@@ -1,73 +1,81 @@
-# React + TypeScript + Vite
+# AccessEase AI
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+AccessEase AI is an accessibility-first React and Vite application that helps people understand difficult information, complete digital tasks, and communicate accessibility needs in clear language.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Home page with clear tool entry points
+- AI Assistant with short-answer, step-by-step, and plain-language controls
+- Simplify Text workflow
+- Accommodation Message Builder
+- Quick Communication Board with read-aloud support
+- Accessibility Settings saved in local storage
+- Privacy and safety guidance
+- Mock AI responses when no backend key is configured
+- Serverless AI route stub at `api/ai.ts`
 
-## React Compiler
+## Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React
+- Vite
+- TypeScript
+- Semantic HTML
+- Centralized CSS
 
-## Expanding the ESLint configuration
+## Run locally
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+For live AI testing on localhost:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+1. Create a file named `.env` in the project root
+2. Add your key like this:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```env
+OPENAI_API_KEY=your_key_here
+```
+
+3. Restart `npm run dev`
+
+When the local Vite dev server sees `OPENAI_API_KEY`, it will answer `/api/ai` locally and use `gpt-4.1-mini` for the app.
+
+## Environment setup
+
+1. Copy `.env.example` to `.env`
+2. Add a server-side `OPENAI_API_KEY`
+3. Keep the API key out of frontend code
+
+If no backend key is configured, the app safely falls back to mock responses for local development.
+
+## Deployment note
+
+The frontend sends AI requests to `/api/ai`. For production, deploy on a platform that supports serverless API routes for the `api/` directory, or move the same handler logic into your backend.
+
+## Accessibility goals
+
+- WCAG 2.2 AA-oriented design
+- Keyboard navigation
+- Visible focus states
+- Responsive layout
+- Plain-language content
+- Reduced motion and high-contrast support
+
+## Project structure
+
+```text
+src/
+  App.tsx
+  main.tsx
+  index.css
+  styles.css
+  ai.ts
+  accessibility.ts
+  appPages.ts
+  clipboard.ts
+  components/
+api/
+  ai.ts
 ```
